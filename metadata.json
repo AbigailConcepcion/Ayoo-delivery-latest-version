@@ -1,0 +1,7 @@
+{
+  "name": "Ayoo Delivery - Full Stack",
+  "description": "High-energy multi-role food delivery platform for Iligan City with real-time tracking, merchant dashboard, rider app, and admin panel.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

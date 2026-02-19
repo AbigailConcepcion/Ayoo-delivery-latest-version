@@ -1,0 +1,33 @@
+{
+  "users": [],
+  "restaurants": [
+    {
+      "id": "1",
+      "name": "Jollibee Iligan",
+      "rating": 4.8,
+      "deliveryTime": "20-30 min",
+      "cuisine": "Fast Food",
+      "isPartner": true,
+      "address": "Aguinaldo St, Iligan City",
+      "image": "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&q=80&w=600",
+      "items": [
+        { "id": "j1", "name": "Chickenjoy 1pc w/ Spaghetti", "price": 135, "description": "Crispy licious chicken served with the legendary sweet-style spaghetti.", "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&q=80&w=200", "category": "Best Sellers", "isPopular": true },
+        { "id": "j2", "name": "Yumburger w/ Fries", "price": 95, "description": "Classic beef burger with a side of crispy golden fries.", "image": "https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&q=80&w=200", "category": "Burgers" }
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Tatay's Grill",
+      "rating": 4.9,
+      "deliveryTime": "35-50 min",
+      "cuisine": "Filipino BBQ",
+      "isPartner": true,
+      "address": "Pala-o, Iligan City",
+      "image": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600",
+      "items": [
+        { "id": "t1", "name": "Special Pork BBQ (3pcs)", "price": 120, "description": "Marinated in Tatay’s secret sauce and grilled to perfection.", "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=200", "category": "Best Sellers", "isPopular": true }
+      ]
+    }
+  ],
+  "orders": []
+}
