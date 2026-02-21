@@ -92,18 +92,19 @@ async function startServer() {
   // Auth
   app.post('/api/auth/register', async (req, res) => {
     const { email, password, name, role, restaurantName } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
     const db = getDb();
     
-    if (db.users.find((u: any) => u.email === email)) {
+    if (db.users.find((u: any) => u.email === normalizedEmail)) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = {
       id: Math.random().toString(36).substr(2, 9),
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
-      name,
+      name: name.trim(),
       role: role || 'CUSTOMER',
     };
 
@@ -118,6 +119,7 @@ async function startServer() {
         items: [],
         isPartner: true,
         ownerId: newUser.id,
+        isOpen: true,
       };
       db.restaurants.push(newRestaurant);
       (newUser as any).restaurantId = newRestaurant.id;
@@ -133,8 +135,9 @@ async function startServer() {
 
   app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
+    const normalizedEmail = email.toLowerCase().trim();
     const db = getDb();
-    const user = db.users.find((u: any) => u.email === email);
+    const user = db.users.find((u: any) => u.email === normalizedEmail);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -159,7 +162,7 @@ async function startServer() {
   });
 
   app.patch('/api/restaurants/:id', (req, res) => {
-    const { name, cuisine, address, lat, lng, image } = req.body;
+    const { name, cuisine, address, lat, lng, image, isOpen } = req.body;
     const db = getDb();
     const restaurantIndex = db.restaurants.findIndex((r: any) => r.id === req.params.id);
     if (restaurantIndex === -1) return res.status(404).json({ message: 'Restaurant not found' });
@@ -172,6 +175,7 @@ async function startServer() {
       lat: lat !== undefined ? lat : db.restaurants[restaurantIndex].lat,
       lng: lng !== undefined ? lng : db.restaurants[restaurantIndex].lng,
       image: image || db.restaurants[restaurantIndex].image,
+      isOpen: isOpen !== undefined ? isOpen : db.restaurants[restaurantIndex].isOpen,
     };
 
     saveDb(db);
@@ -407,7 +411,7 @@ async function startServer() {
 
   // Menu Management
   app.post('/api/restaurants/:id/items', (req, res) => {
-    const { name, price, description, category, image, isPopular, isSpicy } = req.body;
+    const { name, price, description, category, image, isPopular, isSpicy, isAvailable } = req.body;
     const db = getDb();
     const restaurantIndex = db.restaurants.findIndex((r: any) => r.id === req.params.id);
     
@@ -422,6 +426,7 @@ async function startServer() {
       image: image || 'https://picsum.photos/seed/food/400/400',
       isPopular: !!isPopular,
       isSpicy: !!isSpicy,
+      isAvailable: isAvailable !== undefined ? isAvailable : true,
     };
 
     db.restaurants[restaurantIndex].items.push(newItem);
@@ -430,7 +435,7 @@ async function startServer() {
   });
 
   app.patch('/api/restaurants/:id/items/:itemId', (req, res) => {
-    const { name, price, description, category, image, isPopular, isSpicy } = req.body;
+    const { name, price, description, category, image, isPopular, isSpicy, isAvailable } = req.body;
     const db = getDb();
     const restaurantIndex = db.restaurants.findIndex((r: any) => r.id === req.params.id);
     
@@ -448,6 +453,7 @@ async function startServer() {
       image: image !== undefined ? image : db.restaurants[restaurantIndex].items[itemIndex].image,
       isPopular: isPopular !== undefined ? !!isPopular : db.restaurants[restaurantIndex].items[itemIndex].isPopular,
       isSpicy: isSpicy !== undefined ? !!isSpicy : db.restaurants[restaurantIndex].items[itemIndex].isSpicy,
+      isAvailable: isAvailable !== undefined ? isAvailable : db.restaurants[restaurantIndex].items[itemIndex].isAvailable,
     };
 
     db.restaurants[restaurantIndex].items[itemIndex] = updatedItem;

@@ -17,6 +17,7 @@ const Cart: React.FC<CartProps> = ({ items, onBack, onCheckout, restaurant }) =>
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState(user?.address || 'Aguinaldo St, Iligan City');
+  const [addressError, setAddressError] = useState('');
   const [location, setLocation] = useState({ lat: user?.lat || 8.2285, lng: user?.lng || 124.2452 });
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('COD');
   const [voucherCode, setVoucherCode] = useState('');
@@ -69,6 +70,14 @@ const Cart: React.FC<CartProps> = ({ items, onBack, onCheckout, restaurant }) =>
 
   const handlePlaceOrder = async () => {
     if (!user || !restaurant) return;
+
+    if (!address.trim()) {
+      setAddressError('Please enter a delivery address');
+      const addressElement = document.getElementById('delivery-address');
+      addressElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -235,18 +244,27 @@ const Cart: React.FC<CartProps> = ({ items, onBack, onCheckout, restaurant }) =>
                 )}
             </div>
 
-            <div className="bg-white p-6 rounded-[32px] shadow-sm">
+            <div className="bg-white p-6 rounded-[32px] shadow-sm" id="delivery-address">
                 <h4 className="font-black text-gray-900 mb-4 flex items-center gap-2">
                   <MapPin size={18} className="text-[#FF00CC]" /> Delivery Address
                 </h4>
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 mb-4">
+                <div className={`p-4 bg-gray-50 rounded-2xl border mb-4 ${addressError ? 'border-red-500 bg-red-50' : 'border-gray-100'}`}>
                   <input 
                     type="text" 
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      if (e.target.value.trim()) setAddressError('');
+                    }}
                     className="w-full bg-transparent font-bold text-sm text-gray-700 focus:outline-none"
+                    placeholder="Enter your delivery address"
                   />
                 </div>
+                {addressError && (
+                  <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4 flex items-center gap-1">
+                    <X size={12} /> {addressError}
+                  </p>
+                )}
                 <MapPicker 
                     initialLat={location.lat} 
                     initialLng={location.lng} 

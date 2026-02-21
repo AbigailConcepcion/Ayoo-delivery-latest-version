@@ -123,6 +123,8 @@ const AppContent: React.FC = () => {
             restaurant={selectedRestaurant} 
             onBack={() => setScreen('HOME')} 
             onAddToCart={addToCart}
+            onOpenCart={() => setScreen('CART')}
+            cartCount={cartItems.reduce((acc, item) => acc + item.quantity, 0)}
           />
         ) : <Home 
           onSelectRestaurant={navigateToRestaurant} 

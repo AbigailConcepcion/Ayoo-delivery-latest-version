@@ -4,7 +4,9 @@ import { CATEGORIES } from '../constants';
 import { Restaurant, Voucher } from '../types';
 import { GoogleGenAI } from "@google/genai";
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Search, ShoppingBag, Star, MapPin, RefreshCw, Ticket } from 'lucide-react';
+import { LogOut, Search, ShoppingBag, Star, MapPin, RefreshCw, Ticket, Copy } from 'lucide-react';
+import Logo from '../components/Logo';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface HomeProps {
   onSelectRestaurant: (restaurant: Restaurant) => void;
@@ -22,11 +24,19 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     fetchRestaurants();
     fetchVouchers();
   }, []);
+
+  const showNotification = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+  };
 
   const fetchVouchers = async () => {
     try {
@@ -35,6 +45,20 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
       setVouchers(data.filter((v: Voucher) => v.isActive));
     } catch (error) {
       console.error('Failed to fetch vouchers:', error);
+    }
+  };
+
+  const handleCopyVoucher = (code: string) => {
+    navigator.clipboard.writeText(code);
+    showNotification(`Code ${code} copied!`);
+  };
+
+  const handleVoucherNav = () => {
+    if (vouchers.length > 0) {
+      const el = document.getElementById('vouchers-section');
+      el?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      showNotification('No active promos right now');
     }
   };
 
@@ -68,19 +92,40 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
     }
   };
 
-  const filteredRestaurants = restaurants.filter(r => 
-    r.name.toLowerCase().includes(search.toLowerCase()) || 
-    r.cuisine.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredRestaurants = restaurants
+    .filter(r => 
+      r.name.toLowerCase().includes(search.toLowerCase()) || 
+      r.cuisine.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      // Sort open restaurants first
+      if ((a.isOpen ?? true) === (b.isOpen ?? true)) return 0;
+      return (a.isOpen ?? true) ? -1 : 1;
+    });
 
   return (
-    <div className="flex flex-col h-screen bg-white pb-24 overflow-y-auto scroll-smooth scrollbar-hide">
+    <div className="flex flex-col h-screen bg-white pb-24 overflow-y-auto scroll-smooth scrollbar-hide relative">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] bg-[#FF00CC] text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
+          >
+            <Ticket size={18} />
+            <span className="font-black text-xs uppercase tracking-widest">{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="bg-[#FF00CC] p-6 rounded-b-[45px] shadow-xl sticky top-0 z-40">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 ayoo-gradient rounded-[18px] flex items-center justify-center p-[2.5px] shadow-lg">
-                <div className="bg-white w-full h-full rounded-[16px] flex items-center justify-center font-black text-[#FF00CC] text-xl">ay</div>
+            <div className="transform scale-75 -ml-2">
+              <Logo size="sm" variant="white" withSubtext={false} />
             </div>
             <div className="text-white">
               <p className="text-[10px] opacity-80 font-black uppercase tracking-[0.2em] leading-none mb-1">Delivering to</p>
@@ -148,9 +193,13 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
                   <h4 className="text-2xl font-black tracking-tighter mb-1 leading-none">{voucher.description}</h4>
                   <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Min. order ₱{voucher.minOrderValue}</p>
                 </div>
-                <div className="absolute right-5 bottom-5 bg-white/20 px-3 py-1 rounded-full backdrop-blur-md">
+                <button 
+                  onClick={() => handleCopyVoucher(voucher.code)}
+                  className="absolute right-5 bottom-5 bg-white/20 px-3 py-1 rounded-full backdrop-blur-md hover:bg-white/30 active:scale-95 transition-all flex items-center gap-1"
+                >
+                  <Copy size={10} />
                   <span className="text-[10px] font-black uppercase tracking-widest">Copy</span>
-                </div>
+                </button>
               </div>
             ))}
           </div>
@@ -193,17 +242,24 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
             {filteredRestaurants.map(res => (
               <div 
                 key={res.id} 
-                className="group bg-white rounded-[40px] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 border border-gray-100/50 cursor-pointer"
-                onClick={() => onSelectRestaurant(res)}
+                className={`group bg-white rounded-[40px] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 border border-gray-100/50 cursor-pointer ${!(res.isOpen ?? true) ? 'grayscale opacity-80' : ''}`}
+                onClick={() => (res.isOpen ?? true) && onSelectRestaurant(res)}
               >
                 <div className="h-64 overflow-hidden relative">
                   <img src={res.image} alt={res.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                   
                   {/* Status Badges */}
                   <div className="absolute top-5 left-5 flex flex-col gap-2">
-                     <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl text-[10px] font-black text-[#FF00CC] shadow-xl flex items-center gap-2 uppercase tracking-widest">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> {res.deliveryTime}
-                     </div>
+                     {!(res.isOpen ?? true) ? (
+                        <div className="bg-red-500 px-4 py-2 rounded-2xl text-[10px] font-black text-white shadow-xl flex items-center gap-2 uppercase tracking-widest border border-white/20">
+                           🔴 Closed
+                        </div>
+                     ) : (
+                        <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl text-[10px] font-black text-[#FF00CC] shadow-xl flex items-center gap-2 uppercase tracking-widest">
+                           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> {res.deliveryTime}
+                        </div>
+                     )}
+                     
                      {res.isPartner && (
                        <div className="bg-[#FF00CC] px-4 py-2 rounded-2xl text-[10px] font-black text-white shadow-xl flex items-center gap-2 uppercase tracking-widest border border-white/20">
                           ✨ Partner Merchant
@@ -242,7 +298,7 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
                     </span>
                     <div className="w-1.5 h-1.5 bg-gray-200 rounded-full"></div>
                     <span className="text-[#FF00CC] font-black text-[11px] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
-                      View Menu →
+                      {(res.isOpen ?? true) ? 'View Menu →' : 'Currently Closed'}
                     </span>
                   </div>
                 </div>
@@ -259,10 +315,7 @@ const Home: React.FC<HomeProps> = ({ onSelectRestaurant, onOpenCart, onOpenProfi
           <span className="text-[10px] font-black uppercase tracking-widest">Home</span>
         </button>
         <button 
-          onClick={() => {
-            const el = document.getElementById('vouchers-section');
-            el?.scrollIntoView({ behavior: 'smooth' });
-          }} 
+          onClick={handleVoucherNav} 
           className="flex flex-col items-center text-gray-300 active:scale-90 transition-transform group"
         >
           <span className="text-2xl mb-1 opacity-60 group-hover:-translate-y-1 transition-transform">🎫</span>

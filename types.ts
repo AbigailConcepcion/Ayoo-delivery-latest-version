@@ -56,6 +56,7 @@ export interface FoodItem {
   isPopular?: boolean;
   isSpicy?: boolean;
   isNew?: boolean;
+  isAvailable?: boolean;
 }
 
 export interface Restaurant {
@@ -71,6 +72,7 @@ export interface Restaurant {
   ownerId?: string;
   lat?: number;
   lng?: number;
+  isOpen?: boolean;
 }
 
 export interface Voucher {

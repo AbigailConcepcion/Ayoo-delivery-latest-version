@@ -2,16 +2,20 @@
 import React, { useState, useMemo } from 'react';
 import { Restaurant, FoodItem } from '../types';
 import Button from '../components/Button';
-import { ArrowLeft, Share2, Heart, Star, Clock, Bike, Flame, Sparkles } from 'lucide-react';
+import { ArrowLeft, Share2, Heart, Star, Clock, Bike, Flame, Sparkles, ShoppingBag } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface RestaurantDetailProps {
   restaurant: Restaurant;
   onBack: () => void;
   onAddToCart: (item: FoodItem) => void;
+  onOpenCart: () => void;
+  cartCount: number;
 }
 
-const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ restaurant, onBack, onAddToCart }) => {
+const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ restaurant, onBack, onAddToCart, onOpenCart, cartCount }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [showToast, setShowToast] = useState(false);
 
   // Group items by category
   const categorizedItems = useMemo(() => {
@@ -31,8 +35,29 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ restaurant, onBack,
 
   const displayEntries = Object.entries(displayItems) as [string, FoodItem[]][];
 
+  const handleAddToCart = (item: FoodItem) => {
+    onAddToCart(item);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+  };
+
   return (
-    <div className="bg-white min-h-screen pb-32 overflow-y-auto scrollbar-hide">
+    <div className="bg-white min-h-screen pb-32 overflow-y-auto scrollbar-hide relative">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-[#FF00CC] text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
+          >
+            <ShoppingBag size={18} />
+            <span className="font-black text-xs uppercase tracking-widest">Added to Cart!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Visual Header */}
       <div className="relative h-80">
         <img src={restaurant.image} className="w-full h-full object-cover" alt={restaurant.name} />
@@ -47,11 +72,16 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ restaurant, onBack,
             <ArrowLeft size={24} />
           </button>
           <div className="flex gap-3">
-             <button className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 active:scale-90 transition-all">
-                <Share2 size={20} />
-             </button>
-             <button className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 active:scale-90 transition-all">
-                <Heart size={20} />
+             <button 
+                onClick={onOpenCart}
+                className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 active:scale-90 transition-all relative"
+             >
+                <ShoppingBag size={20} />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-[#FFD700] text-black text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                    {cartCount}
+                  </span>
+                )}
              </button>
           </div>
         </div>
@@ -126,7 +156,7 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ restaurant, onBack,
                
                <div className="space-y-8">
                   {items.map(item => (
-                    <div key={item.id} className="group flex gap-6 items-start">
+                    <div key={item.id} className={`group flex gap-6 items-start ${!(item.isAvailable ?? true) ? 'opacity-50 grayscale' : ''}`}>
                       <div className="relative flex-shrink-0">
                         <div className="w-32 h-32 rounded-[32px] overflow-hidden shadow-xl border-4 border-white group-hover:scale-105 transition-transform duration-500">
                           <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
@@ -157,10 +187,15 @@ const RestaurantDetail: React.FC<RestaurantDetailProps> = ({ restaurant, onBack,
                              <span className="font-black text-2xl text-[#FF00CC]">₱{item.price}</span>
                           </div>
                           <button 
-                            onClick={() => onAddToCart(item)}
-                            className="bg-[#FF00CC] text-white px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:brightness-110 active:scale-95 transition-all shadow-pink-100"
+                            onClick={() => (item.isAvailable ?? true) && handleAddToCart(item)}
+                            disabled={!(item.isAvailable ?? true)}
+                            className={`px-8 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all ${
+                                (item.isAvailable ?? true) 
+                                ? 'bg-[#FF00CC] text-white hover:brightness-110 active:scale-95 shadow-pink-100' 
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                            }`}
                           >
-                            Add to Cart +
+                            {(item.isAvailable ?? true) ? 'Add to Cart +' : 'Sold Out'}
                           </button>
                         </div>
                       </div>
