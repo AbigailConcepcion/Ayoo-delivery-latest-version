@@ -20,7 +20,33 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 
 // Initial DB state
 const initialDb = {
-  users: [],
+  users: [
+    {
+      id: 'rider1',
+      email: 'rider1@ayoo.com',
+      password: 'hashed_password', // In real app this would be hashed
+      name: 'Juan Dela Cruz',
+      role: 'RIDER',
+      phone: '09171234567',
+      riderStatus: 'PENDING',
+      vehicleType: 'MOTORCYCLE',
+      licensePlate: 'ABC 1234',
+      isOnline: false
+    },
+    {
+      id: 'rider2',
+      email: 'rider2@ayoo.com',
+      password: 'hashed_password',
+      name: 'Pedro Penduko',
+      role: 'RIDER',
+      phone: '09187654321',
+      riderStatus: 'APPROVED',
+      vehicleType: 'BICYCLE',
+      isOnline: true,
+      lat: 8.2285,
+      lng: 124.2452
+    }
+  ],
   restaurants: [],
   orders: [],
   vouchers: [
@@ -188,6 +214,11 @@ async function startServer() {
     res.json(db.orders.filter((o: any) => o.restaurantId === req.params.id));
   });
 
+  app.get('/api/orders/rider/:id', (req, res) => {
+    const db = getDb();
+    res.json(db.orders.filter((o: any) => o.riderId === req.params.id));
+  });
+
   app.get('/api/orders/available', (req, res) => {
     const db = getDb();
     res.json(db.orders.filter((o: any) => o.status === 'READY_FOR_PICKUP' || o.status === 'PENDING'));
@@ -232,7 +263,7 @@ async function startServer() {
 
   // Profile Management
   app.patch('/api/users/:id', (req, res) => {
-    const { name, address, phone, lat, lng } = req.body;
+    const { name, address, phone, lat, lng, vehicleType, licensePlate, photoUrl } = req.body;
     const db = getDb();
     const userIndex = db.users.findIndex((u: any) => u.id === req.params.id);
     if (userIndex === -1) return res.status(404).json({ message: 'User not found' });
@@ -244,6 +275,9 @@ async function startServer() {
       phone: phone !== undefined ? phone : db.users[userIndex].phone,
       lat: lat !== undefined ? lat : db.users[userIndex].lat,
       lng: lng !== undefined ? lng : db.users[userIndex].lng,
+      vehicleType: vehicleType !== undefined ? vehicleType : db.users[userIndex].vehicleType,
+      licensePlate: licensePlate !== undefined ? licensePlate : db.users[userIndex].licensePlate,
+      photoUrl: photoUrl !== undefined ? photoUrl : db.users[userIndex].photoUrl,
     };
 
     saveDb(db);
@@ -347,6 +381,28 @@ async function startServer() {
     if (expiry < now) return res.status(400).json({ message: 'Voucher has expired' });
     
     res.json(voucher);
+  });
+
+  // Rider Management
+  app.get('/api/admin/riders', (req, res) => {
+    const db = getDb();
+    const riders = db.users.filter((u: any) => u.role === 'RIDER');
+    res.json(riders);
+  });
+
+  app.patch('/api/admin/riders/:id/status', (req, res) => {
+    const { status } = req.body;
+    const db = getDb();
+    const userIndex = db.users.findIndex((u: any) => u.id === req.params.id);
+    
+    if (userIndex === -1) return res.status(404).json({ message: 'User not found' });
+    if (db.users[userIndex].role !== 'RIDER') return res.status(400).json({ message: 'User is not a rider' });
+
+    db.users[userIndex].riderStatus = status;
+    saveDb(db);
+    
+    const { password: _, ...userWithoutPassword } = db.users[userIndex];
+    res.json(userWithoutPassword);
   });
 
   // Menu Management

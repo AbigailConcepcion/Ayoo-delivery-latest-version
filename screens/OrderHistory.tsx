@@ -24,8 +24,16 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ onBack, onReorder, onTrackO
   }, [user]);
 
   const fetchOrders = async () => {
+    if (!user) return;
     try {
-      const response = await fetch(`/api/orders/customer/${user?.id}`);
+      let endpoint = `/api/orders/customer/${user.id}`;
+      if (user.role === 'RIDER') {
+        endpoint = `/api/orders/rider/${user.id}`;
+      } else if (user.role === 'MERCHANT' && user.restaurantId) {
+        endpoint = `/api/orders/restaurant/${user.restaurantId}`;
+      }
+
+      const response = await fetch(endpoint);
       const data = await response.json();
       // Sort by date descending
       setOrders(data.sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -56,6 +64,12 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ onBack, onReorder, onTrackO
     });
   };
 
+  const getDisplayTitle = (order: Order) => {
+    if (user?.role === 'MERCHANT') return order.customerName;
+    if (user?.role === 'RIDER') return `${order.restaurantName} → ${order.customerName}`;
+    return order.restaurantName;
+  };
+
   if (selectedOrder) {
     return (
       <div className="bg-white min-h-screen flex flex-col animate-in slide-in-from-right duration-300">
@@ -68,8 +82,10 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ onBack, onReorder, onTrackO
 
         <div className="flex-1 p-6 space-y-8 overflow-y-auto pb-32">
             <div className="text-center py-4">
-                <div className="w-20 h-20 bg-pink-50 rounded-[30px] flex items-center justify-center text-4xl mx-auto mb-4 shadow-inner">🧾</div>
-                <h3 className="text-2xl font-black text-gray-900 tracking-tighter leading-none mb-1">{selectedOrder.restaurantName}</h3>
+                <div className="w-20 h-20 bg-pink-50 rounded-[30px] flex items-center justify-center text-4xl mx-auto mb-4 shadow-inner">
+                    {user?.role === 'MERCHANT' ? '👤' : '🧾'}
+                </div>
+                <h3 className="text-2xl font-black text-gray-900 tracking-tighter leading-none mb-1">{getDisplayTitle(selectedOrder)}</h3>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{formatDate(selectedOrder.createdAt)}</p>
             </div>
 
@@ -185,7 +201,7 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ onBack, onReorder, onTrackO
                         {order.status === 'DELIVERED' ? '✅' : order.status === 'CANCELLED' ? '❌' : '🛵'}
                     </div>
                     <div>
-                        <h4 className="font-black text-gray-900 tracking-tight leading-none mb-1">{order.restaurantName}</h4>
+                        <h4 className="font-black text-gray-900 tracking-tight leading-none mb-1">{getDisplayTitle(order)}</h4>
                         <div className="flex items-center gap-2">
                             <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider ${getStatusColor(order.status)}`}>
                                 {order.status.replace(/_/g, ' ')}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { User, Restaurant, Order, Voucher } from '../types';
-import { Users, Store, ShoppingBag, Settings, LogOut, TrendingUp, DollarSign, ChevronRight, Activity, Calendar, Ticket, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Users, Store, ShoppingBag, Settings, LogOut, TrendingUp, DollarSign, ChevronRight, Activity, Calendar, Ticket, Plus, Trash2, Edit2, Save, X, Bike, Check, XCircle, MapPin } from 'lucide-react';
 import Logo from '../components/Logo';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
@@ -16,8 +16,9 @@ const AdminPanel: React.FC = () => {
     chartData: [] as any[]
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'USERS' | 'RESTAURANTS' | 'ORDERS' | 'MARKETING'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'USERS' | 'RESTAURANTS' | 'ORDERS' | 'MARKETING' | 'RIDERS'>('OVERVIEW');
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [riders, setRiders] = useState<User[]>([]);
   const [isAddingVoucher, setIsAddingVoucher] = useState(false);
   const [voucherForm, setVoucherForm] = useState<Partial<Voucher>>({
     code: '',
@@ -32,7 +33,33 @@ const AdminPanel: React.FC = () => {
   useEffect(() => {
     fetchStats();
     fetchVouchers();
+    fetchRiders();
   }, []);
+
+  const fetchRiders = async () => {
+    try {
+      const response = await fetch('/api/admin/riders');
+      const data = await response.json();
+      setRiders(data);
+    } catch (error) {
+      console.error('Failed to fetch riders:', error);
+    }
+  };
+
+  const updateRiderStatus = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+    try {
+      const response = await fetch(`/api/admin/riders/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (response.ok) {
+        fetchRiders();
+      }
+    } catch (error) {
+      console.error('Failed to update rider status:', error);
+    }
+  };
 
   const fetchVouchers = async () => {
     try {
@@ -136,6 +163,12 @@ const AdminPanel: React.FC = () => {
               className={`px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'MARKETING' ? 'bg-[#FF00CC] text-white shadow-lg shadow-pink-200' : 'bg-white text-gray-400 hover:bg-gray-50'}`}
             >
               Marketing
+            </button>
+            <button 
+              onClick={() => setActiveTab('RIDERS')}
+              className={`px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'RIDERS' ? 'bg-[#FF00CC] text-white shadow-lg shadow-pink-200' : 'bg-white text-gray-400 hover:bg-gray-50'}`}
+            >
+              Riders
             </button>
             <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
               <Calendar size={16} className="text-[#FF00CC]" />
@@ -499,6 +532,93 @@ const AdminPanel: React.FC = () => {
                                 <p className="font-black text-gray-900">{new Date(voucher.expiryDate).toLocaleDateString()}</p>
                             </div>
                         </div>
+                    </div>
+                ))}
+            </div>
+          </div>
+        ) : activeTab === 'RIDERS' ? (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-black text-gray-900">Rider Management</h2>
+                <div className="flex gap-2">
+                    <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-xs font-black text-gray-600">{riders.filter(r => r.riderStatus === 'APPROVED').length} Active</span>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        <span className="text-xs font-black text-gray-600">{riders.filter(r => r.riderStatus === 'PENDING').length} Pending</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {riders.map(rider => (
+                    <div key={rider.id} className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 group hover:shadow-xl transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-2xl">
+                                    🛵
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-gray-900 text-lg tracking-tight leading-none mb-1">{rider.name}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider ${
+                                            rider.riderStatus === 'APPROVED' ? 'bg-green-50 text-green-500' : 
+                                            rider.riderStatus === 'REJECTED' ? 'bg-red-50 text-red-500' : 
+                                            'bg-yellow-50 text-yellow-600'
+                                        }`}>
+                                            {rider.riderStatus || 'PENDING'}
+                                        </span>
+                                        {rider.isOnline && (
+                                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 mb-6">
+                            <div className="flex items-center gap-3 text-gray-500">
+                                <Bike size={16} />
+                                <span className="text-xs font-bold">{rider.vehicleType || 'Motorcycle'} • {rider.licensePlate || 'N/A'}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-gray-500">
+                                <MapPin size={16} />
+                                <span className="text-xs font-bold">{rider.address || 'No address provided'}</span>
+                            </div>
+                        </div>
+
+                        {rider.riderStatus === 'PENDING' && (
+                            <div className="flex gap-2 pt-4 border-t border-gray-50">
+                                <button 
+                                    onClick={() => updateRiderStatus(rider.id, 'APPROVED')}
+                                    className="flex-1 py-3 bg-green-50 text-green-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-green-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Check size={14} /> Approve
+                                </button>
+                                <button 
+                                    onClick={() => updateRiderStatus(rider.id, 'REJECTED')}
+                                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <XCircle size={14} /> Reject
+                                </button>
+                            </div>
+                        )}
+                        
+                        {rider.riderStatus === 'APPROVED' && (
+                             <div className="flex gap-2 pt-4 border-t border-gray-50">
+                                <button className="flex-1 py-3 bg-gray-50 text-gray-400 rounded-xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed">
+                                    Verified Partner
+                                </button>
+                                <button 
+                                    onClick={() => updateRiderStatus(rider.id, 'REJECTED')}
+                                    className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"
+                                >
+                                    <LogOut size={16} />
+                                </button>
+                             </div>
+                        )}
                     </div>
                 ))}
             </div>

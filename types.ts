@@ -13,6 +13,12 @@ export interface User {
   phone?: string;
   lat?: number;
   lng?: number;
+  photoUrl?: string;
+  // Rider specific
+  riderStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  vehicleType?: 'MOTORCYCLE' | 'BICYCLE';
+  licensePlate?: string;
+  isOnline?: boolean;
 }
 
 export type OrderStatus = 'PENDING' | 'ACCEPTED' | 'PREPARING' | 'READY_FOR_PICKUP' | 'PICKED_UP' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';

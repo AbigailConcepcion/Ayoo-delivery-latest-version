@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 import Button from '../components/Button';
 import MapPicker from '../components/MapPicker';
-import { ArrowLeft, User as UserIcon, Phone, MapPin, Save, LogOut } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Phone, MapPin, Save, LogOut, Bike, FileText, CheckCircle, Camera } from 'lucide-react';
 
 interface ProfileProps {
   onBack: () => void;
@@ -13,13 +13,28 @@ interface ProfileProps {
 const Profile: React.FC<ProfileProps> = ({ onBack }) => {
   const { user, login, logout } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState<Partial<User>>({
     name: user?.name || '',
     phone: user?.phone || '',
     address: user?.address || '',
     lat: user?.lat || 8.2285,
     lng: user?.lng || 124.2452,
+    vehicleType: user?.vehicleType,
+    licensePlate: user?.licensePlate,
+    photoUrl: user?.photoUrl,
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, photoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -34,7 +49,8 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
         const updatedUser = await response.json();
         const token = localStorage.getItem('ayoo_token');
         if (token) login(updatedUser, token);
-        alert('Profile updated successfully!');
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
       }
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -44,7 +60,15 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="bg-white min-h-screen flex flex-col">
+    <div className="bg-white min-h-screen flex flex-col relative">
+      {/* Success Toast */}
+      {showSuccess && (
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <CheckCircle size={18} />
+          <span className="text-xs font-black uppercase tracking-widest">Profile Updated!</span>
+        </div>
+      )}
+
       <div className="p-6 flex items-center gap-4 border-b border-gray-50 sticky top-0 bg-white z-10">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-[#FF00CC]">
           <ArrowLeft size={24} />
@@ -54,10 +78,33 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
 
       <div className="flex-1 p-6 space-y-8 overflow-y-auto pb-32">
         <div className="flex flex-col items-center">
-            <div className="w-24 h-24 bg-pink-50 rounded-[35px] flex items-center justify-center text-4xl mb-4 shadow-inner border-4 border-white">
-                {user?.role === 'CUSTOMER' ? '👤' : user?.role === 'MERCHANT' ? '🍳' : '🛵'}
+            <div className="relative group cursor-pointer">
+                <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileChange} 
+                    className="hidden" 
+                    id="photo-upload"
+                />
+                <label htmlFor="photo-upload" className="cursor-pointer block">
+                    {formData.photoUrl ? (
+                        <img 
+                            src={formData.photoUrl} 
+                            alt="Profile" 
+                            className="w-24 h-24 rounded-[35px] object-cover shadow-inner border-4 border-white"
+                        />
+                    ) : (
+                        <div className="w-24 h-24 bg-pink-50 rounded-[35px] flex items-center justify-center text-4xl mb-4 shadow-inner border-4 border-white">
+                            {user?.role === 'CUSTOMER' ? '👤' : user?.role === 'MERCHANT' ? '🍳' : '🛵'}
+                        </div>
+                    )}
+                    <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-full shadow-md group-hover:scale-110 transition-transform">
+                        <Camera size={16} className="text-[#FF00CC]" />
+                    </div>
+                </label>
             </div>
-            <p className="text-[10px] font-black text-[#FF00CC] uppercase tracking-widest">{user?.role} Account</p>
+            <p className="text-[10px] font-black text-[#FF00CC] uppercase tracking-widest mt-4">{user?.role} Account</p>
+            <p className="text-xs text-gray-400 font-bold mt-1">{user?.email}</p>
         </div>
 
         <div className="space-y-6">
@@ -69,7 +116,7 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
                     type="text" 
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC]"
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC] transition-colors"
                 />
             </div>
 
@@ -81,20 +128,50 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
                     type="tel" 
                     value={formData.phone}
                     onChange={e => setFormData({...formData, phone: e.target.value})}
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC]"
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC] transition-colors"
                     placeholder="09XX XXX XXXX"
                 />
             </div>
 
+            {user?.role === 'RIDER' && (
+                <>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <Bike size={12} /> Vehicle Type
+                        </label>
+                        <select 
+                            value={formData.vehicleType || 'MOTORCYCLE'}
+                            onChange={e => setFormData({...formData, vehicleType: e.target.value as any})}
+                            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC] transition-colors appearance-none"
+                        >
+                            <option value="MOTORCYCLE">Motorcycle</option>
+                            <option value="BICYCLE">Bicycle</option>
+                        </select>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <FileText size={12} /> License Plate
+                        </label>
+                        <input 
+                            type="text" 
+                            value={formData.licensePlate || ''}
+                            onChange={e => setFormData({...formData, licensePlate: e.target.value})}
+                            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC] transition-colors uppercase"
+                            placeholder="ABC 1234"
+                        />
+                    </div>
+                </>
+            )}
+
             <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <MapPin size={12} /> Delivery Address
+                    <MapPin size={12} /> Default Address
                 </label>
                 <input 
                     type="text" 
                     value={formData.address}
                     onChange={e => setFormData({...formData, address: e.target.value})}
-                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC]"
+                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-sm focus:outline-none focus:border-[#FF00CC] transition-colors"
                 />
             </div>
 
@@ -102,25 +179,27 @@ const Profile: React.FC<ProfileProps> = ({ onBack }) => {
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <MapPin size={12} /> Pin Location on Map
                 </label>
-                <MapPicker 
-                    initialLat={formData.lat} 
-                    initialLng={formData.lng} 
-                    onLocationSelect={(lat, lng) => setFormData({...formData, lat, lng})} 
-                />
+                <div className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                    <MapPicker 
+                        initialLat={formData.lat} 
+                        initialLng={formData.lng} 
+                        onLocationSelect={(lat, lng) => setFormData({...formData, lat, lng})} 
+                    />
+                </div>
             </div>
         </div>
 
         <button 
             onClick={logout}
-            className="w-full p-4 bg-red-50 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+            className="w-full p-4 bg-red-50 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
         >
             <LogOut size={18} /> Logout Account
         </button>
       </div>
 
-      <div className="p-6 bg-white border-t border-gray-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto">
-        <Button onClick={handleSave} disabled={isSubmitting} className="py-5 font-black uppercase tracking-widest">
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
+      <div className="p-6 bg-white border-t border-gray-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-20">
+        <Button onClick={handleSave} disabled={isSubmitting} className="py-5 font-black uppercase tracking-widest shadow-xl shadow-pink-200">
+            {isSubmitting ? 'Saving Changes...' : 'Save Changes'}
         </Button>
       </div>
     </div>
